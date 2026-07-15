@@ -1,6 +1,6 @@
 export default function SchedulePage() {
   return (
-    <div className="max-w-md mx-auto px-4 pt-6">
+    <div className="px-4 pt-6">
       <h1 className="text-xl font-bold text-gray-800 mb-4">일정</h1>
       <div className="bg-white rounded-2xl p-6 text-center text-gray-400 shadow-sm border border-gray-100">
         <p className="text-3xl mb-2">📅</p>

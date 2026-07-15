@@ -8,7 +8,7 @@ export default function HomePage() {
   });
 
   return (
-    <div className="max-w-md mx-auto px-4 pt-6">
+    <div className="px-4 pt-6">
       {/* Header */}
       <div className="mb-6">
         <p className="text-sm text-gray-400">{dateStr}</p>

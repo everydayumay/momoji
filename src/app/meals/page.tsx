@@ -64,7 +64,7 @@ export default function MealsPage() {
   const menuEmojis = ["🍜", "🥘", "🍳"];
 
   return (
-    <div className="max-w-md mx-auto px-4 pt-6">
+    <div className="px-4 pt-6">
       <h1 className="text-xl font-bold text-gray-800 mb-1">오늘 뭐 먹지?</h1>
       <p className="text-xs text-gray-400 mb-5">냉장고 재료로 메뉴를 추천해드려요</p>
 

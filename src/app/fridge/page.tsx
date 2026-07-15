@@ -98,7 +98,7 @@ export default function FridgePage() {
   );
 
   return (
-    <div className="max-w-md mx-auto px-4 pt-6">
+    <div className="px-4 pt-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold text-gray-800">냉장고</h1>
