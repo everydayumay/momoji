@@ -11,7 +11,12 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { COLLECTIONS } from "@/lib/firestore-schema";
+import {
+  COLLECTIONS,
+  DEFAULT_FRIDGE_UNIT,
+  FRIDGE_UNITS,
+} from "@/lib/firestore-schema";
+import { formatAmount } from "@/lib/recommend-client";
 import { FridgeItem } from "@/types/firestore";
 
 const CATEGORIES = ["채소", "육류", "해산물", "유제품", "조미료", "기타"];
@@ -32,7 +37,12 @@ export default function FridgePage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<FridgeItemWithId | null>(null);
-  const [form, setForm] = useState({ name: "", amount: "1", category: "채소" });
+  const [form, setForm] = useState({
+    name: "",
+    amount: "1",
+    unit: DEFAULT_FRIDGE_UNIT as string,
+    category: "채소",
+  });
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -48,7 +58,12 @@ export default function FridgePage() {
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: "", amount: "1", category: "채소" });
+    setForm({
+      name: "",
+      amount: "1",
+      unit: DEFAULT_FRIDGE_UNIT,
+      category: "채소",
+    });
     setShowModal(true);
   };
 
@@ -57,6 +72,7 @@ export default function FridgePage() {
     setForm({
       name: item.name,
       amount: String(item.amount),
+      unit: item.unit ?? DEFAULT_FRIDGE_UNIT,
       category: item.category,
     });
     setShowModal(true);
@@ -69,6 +85,7 @@ export default function FridgePage() {
       const data = {
         name: form.name.trim(),
         amount: Number(form.amount) || 1,
+        unit: form.unit || DEFAULT_FRIDGE_UNIT,
         category: form.category,
         updatedAt: Timestamp.now(),
       };
@@ -150,7 +167,7 @@ export default function FridgePage() {
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-800 text-sm">{item.name}</span>
                       <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                        {item.amount}개
+                        {formatAmount(item)}
                       </span>
                     </div>
                     <div className="flex gap-3">
@@ -182,7 +199,7 @@ export default function FridgePage() {
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-white rounded-t-3xl w-full p-6 pb-10"
+            className="bg-white rounded-t-3xl w-full max-w-[390px] mx-auto p-6 pb-10"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
@@ -203,16 +220,33 @@ export default function FridgePage() {
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-1.5 block">수량</label>
-                <input
-                  type="number"
-                  min="0"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-400"
-                  placeholder="1"
-                  value={form.amount}
-                  onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                />
+              <div className="grid grid-cols-[1fr_7rem] gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1.5 block">수량</label>
+                  <input
+                    type="number"
+                    min="0"
+                    inputMode="decimal"
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-400"
+                    placeholder="1"
+                    value={form.amount}
+                    onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1.5 block">단위</label>
+                  <select
+                    className="w-full border border-gray-200 rounded-xl px-3 py-3 text-sm bg-white focus:outline-none focus:border-orange-400"
+                    value={form.unit}
+                    onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
+                  >
+                    {FRIDGE_UNITS.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>

@@ -19,6 +19,10 @@ interface Props {
   state: SlotState;
   hasIngredients: boolean;
   onRefresh: () => void;
+  /** "재료가 바뀌었어요" 같은 안내 문구 */
+  notice?: string | null;
+  /** "12:30 갱신" 처럼 누가 언제 갱신했는지 */
+  meta?: string | null;
 }
 
 export default function MealRecommendationCard({
@@ -28,6 +32,8 @@ export default function MealRecommendationCard({
   state,
   hasIngredients,
   onRefresh,
+  notice,
+  meta,
 }: Props) {
   const [showSteps, setShowSteps] = useState(false);
   const [altIndex, setAltIndex] = useState(0);
@@ -56,6 +62,12 @@ export default function MealRecommendationCard({
           {state.status === "ready" ? "다시 추천" : "추천받기"}
         </button>
       </div>
+
+      {notice && (
+        <p className="mb-2.5 text-xs text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5">
+          {notice}
+        </p>
+      )}
 
       {!hasIngredients ? (
         <div className="bg-gray-50 rounded-xl p-4 text-center">
@@ -147,6 +159,10 @@ export default function MealRecommendationCard({
               </button>
             )}
           </div>
+
+          {meta && (
+            <p className="mt-2 text-[11px] text-gray-300 text-right">{meta}</p>
+          )}
         </div>
       ) : (
         <div className="bg-gray-50 rounded-xl p-4 text-center">

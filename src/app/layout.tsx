@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // maximumScale은 지정하지 않는다 — 확대를 막으면 접근성에 문제가 된다
   viewportFit: "cover",
 };
 
@@ -30,6 +30,13 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full bg-gray-100">
+        {/* Pretendard 동적 서브셋 — 필요한 글자 조각만 내려받는다 */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="" />
+        <link
+          rel="stylesheet"
+          precedence="default"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
         <AuthProvider>
           <AuthGate>
             <div className="min-h-screen w-full max-w-[390px] mx-auto bg-gray-50 flex flex-col shadow-xl sm:border-x border-gray-200">

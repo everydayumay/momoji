@@ -17,6 +17,8 @@ export interface Member {
 export interface FridgeItem {
   name: string;
   amount: number;
+  /** 수량 단위 (개/g/ml/봉지 등). 기존 데이터에는 없을 수 있어 optional */
+  unit?: string;
   category: string;
   updatedAt: Timestamp;
 }

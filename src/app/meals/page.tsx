@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import { COLLECTIONS } from "@/lib/firestore-schema";
 import { FridgeItem, Member } from "@/types/firestore";
 import type { Menu } from "@/types/recommend";
-import { toIngredients, toMembers } from "@/lib/recommend-client";
+import { formatAmount, toIngredients, toMembers } from "@/lib/recommend-client";
 
 type FridgeItemWithId = FridgeItem & { id: string };
 
@@ -81,7 +81,10 @@ export default function MealsPage() {
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-orange-700">냉장고 재료 {fridgeItems.length}개</p>
             <p className="text-xs text-orange-500 truncate mt-0.5">
-              {fridgeItems.slice(0, 5).map((i) => i.name).join(", ")}
+              {fridgeItems
+                .slice(0, 5)
+                .map((i) => `${i.name} ${formatAmount(i)}`)
+                .join(", ")}
               {fridgeItems.length > 5 && ` 외 ${fridgeItems.length - 5}개`}
             </p>
           </div>
@@ -174,7 +177,7 @@ export default function MealsPage() {
           onClick={() => setSelectedMenu(null)}
         >
           <div
-            className="bg-white rounded-t-3xl w-full max-h-[85vh] overflow-y-auto"
+            className="bg-white rounded-t-3xl w-full max-w-[390px] mx-auto max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Handle */}

@@ -1,3 +1,5 @@
+import type { Timestamp } from "firebase/firestore";
+
 export interface Menu {
   name: string;
   description: string;
@@ -9,7 +11,7 @@ export interface Menu {
 }
 
 export interface RecommendRequest {
-  ingredients: { name: string; amount: number }[];
+  ingredients: { name: string; amount: number; unit?: string }[];
   members?: {
     name?: string;
     healthNotes?: string;
@@ -24,4 +26,19 @@ export interface RecommendRequest {
 
 export interface RecommendResponse {
   menus: Menu[];
+}
+
+/** 끼니 하나에 대한 저장된 추천 */
+export interface SlotRecommendation {
+  menus: Menu[];
+  /** 생성 당시의 냉장고+가족 상태 서명. 달라지면 "재료가 바뀌었어요" 표시 */
+  signature: string;
+  updatedAt?: Timestamp;
+  updatedBy?: string | null;
+}
+
+/** dailyRecommendations/{YYYY-MM-DD} 문서 구조 */
+export interface DailyRecommendationDoc {
+  date: string;
+  slots?: Record<string, SlotRecommendation>;
 }

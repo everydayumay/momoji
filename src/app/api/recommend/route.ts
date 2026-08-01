@@ -4,7 +4,9 @@ type Ingredient = RecommendRequest["ingredients"][number];
 type MemberInput = NonNullable<RecommendRequest["members"]>[number];
 
 function buildIngredientList(ingredients: Ingredient[]) {
-  return ingredients.map((i) => `${i.name} ${i.amount}개`).join(", ");
+  return ingredients
+    .map((i) => `${i.name} ${i.amount}${i.unit?.trim() || "개"}`)
+    .join(", ");
 }
 
 function buildFamilySection(members: MemberInput[]) {
@@ -53,6 +55,7 @@ export async function POST(request: Request) {
 
 지침:
 - 냉장고에 있는 재료를 최대한 활용하세요. 부족한 재료는 마트에서 쉽게 구할 수 있는 것만 소량 추가하세요.
+- 재료 뒤의 수량과 단위(개/g/ml/봉지 등)를 그대로 해석해서, 실제로 만들 수 있는 분량의 메뉴만 추천하세요.
 - 가족 구성원의 건강 메모를 반드시 반영하세요. 예를 들어 임신성 당뇨가 있으면 정제 탄수화물과 설탕을 줄이고, 저GI 곡물·단백질·식이섬유 위주로 구성하세요.
 - 가성비를 중요하게 생각하는 가족입니다. 비싼 식재료나 특수한 재료는 피하세요.
 - 식사 구분이 주어졌다면 그 시간대에 어울리는 부담 없는 메뉴로 추천하세요.
