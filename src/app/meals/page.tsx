@@ -4,20 +4,15 @@ import { useState, useEffect } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { COLLECTIONS } from "@/lib/firestore-schema";
-import { FridgeItem } from "@/types/firestore";
-
-interface Menu {
-  name: string;
-  description: string;
-  cookTime: string;
-  usedIngredients: string[];
-  steps: string[];
-}
+import { FridgeItem, Member } from "@/types/firestore";
+import type { Menu } from "@/types/recommend";
+import { toIngredients, toMembers } from "@/lib/recommend-client";
 
 type FridgeItemWithId = FridgeItem & { id: string };
 
 export default function MealsPage() {
   const [fridgeItems, setFridgeItems] = useState<FridgeItemWithId[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
@@ -28,6 +23,13 @@ export default function MealsPage() {
       setFridgeItems(
         snap.docs.map((d) => ({ id: d.id, ...d.data() } as FridgeItemWithId))
       );
+    });
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, COLLECTIONS.MEMBERS), (snap) => {
+      setMembers(snap.docs.map((d) => d.data() as Member));
     });
     return unsub;
   }, []);
@@ -45,7 +47,11 @@ export default function MealsPage() {
       const res = await fetch("/api/recommend", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ingredients: fridgeItems }),
+        body: JSON.stringify({
+          ingredients: toIngredients(fridgeItems),
+          members: toMembers(members),
+          count: 3,
+        }),
       });
 
       const data = await res.json();
@@ -197,6 +203,12 @@ export default function MealsPage() {
             </div>
 
             <div className="px-6 py-5 space-y-5">
+              {selectedMenu.healthNote && (
+                <p className="text-xs text-green-600 bg-green-50 rounded-lg px-3 py-2">
+                  💚 {selectedMenu.healthNote}
+                </p>
+              )}
+
               {/* Ingredients */}
               <div>
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2.5">
