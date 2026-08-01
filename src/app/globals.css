@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 :root {
+  /* 이 앱은 밝은 화면 하나만 디자인되어 있다.
+     color-scheme을 light로 고정해야 폰이 다크모드일 때
+     입력창·드롭다운이 흰 배경에 흰 글씨로 렌더링되지 않는다. */
+  color-scheme: light;
+
   --background: #ffffff;
   --foreground: #171717;
   /* 한글 우선 폰트 스택 (Pretendard → Geist → OS 기본 한글 폰트) */
@@ -16,13 +21,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -30,4 +28,31 @@ body {
   /* 한글은 단어 중간에서 줄바꿈되지 않도록 */
   word-break: keep-all;
   -webkit-text-size-adjust: 100%;
+}
+
+/* 폼 컨트롤은 OS 테마와 무관하게 항상 흰 배경 + 진한 글씨
+   (체크박스·라디오는 accent-color를 쓰므로 제외) */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  background-color: #ffffff;
+  color: #1f2937; /* gray-800 */
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af; /* gray-400 */
+}
+
+/*
+  iOS Safari는 글자 크기가 16px 미만인 입력창을 탭하면 화면을 강제로 확대한다.
+  (maximumScale로 막을 수도 있지만 그러면 사용자가 확대 자체를 못 하게 된다)
+  터치 기기에서만 16px로 올려서 자동 확대를 막는다.
+*/
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }

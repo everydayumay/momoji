@@ -10,6 +10,29 @@ import { formatAmount, toIngredients, toMembers } from "@/lib/recommend-client";
 
 type FridgeItemWithId = FridgeItem & { id: string };
 
+/** 탭을 옮겨도 추천 결과가 사라지지 않도록 보관 (앱을 닫으면 초기화) */
+const SESSION_KEY = "pickup:meals:menus";
+
+function readSessionMenus(): Menu[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.sessionStorage.getItem(SESSION_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? (parsed as Menu[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSessionMenus(menus: Menu[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(menus));
+  } catch {
+    // 무시
+  }
+}
+
 export default function MealsPage() {
   const [fridgeItems, setFridgeItems] = useState<FridgeItemWithId[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -34,6 +57,15 @@ export default function MealsPage() {
     return unsub;
   }, []);
 
+  // 이전에 받아둔 추천 복원 (다른 탭 갔다 와도 유지).
+  // sessionStorage는 서버에 없으므로 useState 초기값으로 읽으면 하이드레이션이 깨진다.
+  // 마운트 후 한 번만 동기화하는 것이 맞아서 규칙을 의도적으로 끈다.
+  useEffect(() => {
+    const saved = readSessionMenus();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (saved.length > 0) setMenus(saved);
+  }, []);
+
   const handleRecommend = async () => {
     if (fridgeItems.length === 0) {
       setError("냉장고에 재료를 먼저 추가해주세요");
@@ -42,6 +74,7 @@ export default function MealsPage() {
     setLoading(true);
     setError(null);
     setMenus([]);
+    writeSessionMenus([]);
 
     try {
       const res = await fetch("/api/recommend", {
@@ -58,7 +91,9 @@ export default function MealsPage() {
       if (!res.ok || data.error) {
         setError(data.error || "추천 실패");
       } else {
-        setMenus(data.menus || []);
+        const next: Menu[] = data.menus || [];
+        setMenus(next);
+        writeSessionMenus(next);
       }
     } catch {
       setError("네트워크 오류가 발생했습니다");

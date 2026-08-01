@@ -11,7 +11,7 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "모모지 - 우리 가족 밥상 플래너",
+  title: "Pick Up! - 우리 가족 밥상 플래너",
   description: "가족 맞춤 식단 추천 및 냉장고 관리 앱",
 };
 

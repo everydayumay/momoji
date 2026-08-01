@@ -21,7 +21,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-8 text-center">
         <p className="text-5xl mb-4">🍚</p>
-        <h1 className="text-xl font-bold text-gray-800 mb-1">모모지</h1>
+        <h1 className="text-xl font-bold text-gray-800 mb-1">Pick Up!</h1>
         <p className="text-sm text-gray-400 mb-10">우리 가족 밥상 플래너</p>
 
         <button
