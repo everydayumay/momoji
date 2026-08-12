@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { COLLECTIONS } from "@/lib/firestore-schema";
+import { COLLECTIONS, FAMILY_DOC_ID } from "@/lib/firestore-schema";
 import { useAuth } from "@/contexts/AuthContext";
 import type { FridgeItem, Member } from "@/types/firestore";
 import type { DailyRecommendationDoc } from "@/types/recommend";
@@ -19,9 +19,15 @@ import {
   toIngredients,
   toMembers,
 } from "@/lib/recommend-client";
+import {
+  subscribeMealHistory,
+  type MealHistoryWithId,
+} from "@/lib/meal-history";
 import MealRecommendationCard, {
   type SlotState,
 } from "@/components/MealRecommendationCard";
+import MealLogModal, { type MealLogInitial } from "@/components/MealLogModal";
+import type { Menu } from "@/types/recommend";
 
 const SLOTS = [
   {
@@ -29,12 +35,14 @@ const SLOTS = [
     emoji: "🌤",
     keywords: ["아점", "브런치", "아침", "점심"],
     fallback: "11:00 – 13:00",
+    mealType: "lunch",
   },
   {
     key: "저녁",
     emoji: "🌙",
     keywords: ["저녁", "석식"],
     fallback: "18:00 – 20:00",
+    mealType: "dinner",
   },
 ] as const;
 
@@ -59,6 +67,11 @@ export default function HomePage() {
   const [shared, setShared] = useState<DailyRecommendationDoc | null>(null);
   const [sharedLoaded, setSharedLoaded] = useState(false);
   const [local, setLocal] = useState<Record<string, LocalSlot>>({});
+
+  const [mealHistory, setMealHistory] = useState<MealHistoryWithId[]>([]);
+  const [monthlyBudget, setMonthlyBudget] = useState<number | null>(null);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [logInitial, setLogInitial] = useState<MealLogInitial | null>(null);
 
   // 진행 중 슬롯을 effect 의존성 없이 추적
   const inFlight = useRef<Set<string>>(new Set());
@@ -98,6 +111,21 @@ export default function HomePage() {
     return unsub;
   }, []);
 
+  // 식비 기록 (이번 달 합계 계산용)
+  useEffect(() => {
+    const unsub = subscribeMealHistory(setMealHistory);
+    return unsub;
+  }, []);
+
+  // 월 예산 (families/main 문서)
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, COLLECTIONS.FAMILIES, FAMILY_DOC_ID), (snap) => {
+      const data = snap.data();
+      setMonthlyBudget(typeof data?.monthlyBudget === "number" ? data.monthlyBudget : null);
+    });
+    return unsub;
+  }, []);
+
   // 가족이 공유하는 오늘의 추천 문서 구독
   useEffect(() => {
     if (!dateKey) return;
@@ -114,6 +142,27 @@ export default function HomePage() {
     () => buildSignature(fridgeItems, members),
     [fridgeItems, members]
   );
+
+  const monthlySpent = useMemo(() => {
+    if (!dateKey) return 0;
+    const monthPrefix = dateKey.slice(0, 7); // "YYYY-MM"
+    return mealHistory
+      .filter((item) => {
+        const d = item.date?.toDate?.();
+        return d ? kstDateKey(d).startsWith(monthPrefix) : false;
+      })
+      .reduce((sum, item) => sum + (item.cost || 0), 0);
+  }, [mealHistory, dateKey]);
+
+  const budgetPct =
+    monthlyBudget && monthlyBudget > 0
+      ? Math.min(100, Math.round((monthlySpent / monthlyBudget) * 100))
+      : 0;
+
+  const openLogModal = useCallback((menu: Menu, mealType: "breakfast" | "lunch" | "dinner" | "snack") => {
+    setLogInitial({ menu: menu.name, type: "home", mealType });
+    setShowLogModal(true);
+  }, []);
 
   const loadSlot = useCallback(
     async (slotKey: string) => {
@@ -267,6 +316,7 @@ export default function HomePage() {
               meta={view.meta}
               hasIngredients={hasIngredients}
               onRefresh={() => loadSlot(slot.key)}
+              onLogMeal={(menu) => openLogModal(menu, slot.mealType)}
             />
           );
         })}
@@ -282,15 +332,41 @@ export default function HomePage() {
 
       {/* Budget Summary */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <p className="text-xs text-gray-400 mb-1">이번 달 식비</p>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-xs text-gray-400">이번 달 식비</p>
+          <Link href="/meals/history" className="text-xs text-orange-500 font-medium">
+            기록 보기 ›
+          </Link>
+        </div>
         <div className="flex items-end gap-2">
-          <span className="text-2xl font-bold text-gray-800">–</span>
-          <span className="text-sm text-gray-400 mb-1">/ 예산 미설정</span>
+          <span className="text-2xl font-bold text-gray-800">
+            {monthlySpent.toLocaleString()}원
+          </span>
+          <span className="text-sm text-gray-400 mb-1">
+            {monthlyBudget ? `/ ${monthlyBudget.toLocaleString()}원` : "/ 예산 미설정"}
+          </span>
         </div>
-        <div className="mt-2 h-2 bg-gray-100 rounded-full">
-          <div className="h-2 bg-orange-400 rounded-full w-0" />
+        <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-2 bg-orange-400 rounded-full transition-all"
+            style={{ width: `${budgetPct}%` }}
+          />
         </div>
+        {!monthlyBudget && (
+          <Link
+            href="/more/family"
+            className="inline-block mt-2 text-xs text-orange-500 font-medium"
+          >
+            예산 설정하러 가기 ›
+          </Link>
+        )}
       </div>
+
+      <MealLogModal
+        open={showLogModal}
+        onClose={() => setShowLogModal(false)}
+        initial={logInitial}
+      />
     </div>
   );
 }

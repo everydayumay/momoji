@@ -23,6 +23,8 @@ interface Props {
   notice?: string | null;
   /** "12:30 갱신" 처럼 누가 언제 갱신했는지 */
   meta?: string | null;
+  /** 있으면 "이거 먹었어요" 버튼을 노출 */
+  onLogMeal?: (menu: Menu) => void;
 }
 
 export default function MealRecommendationCard({
@@ -34,6 +36,7 @@ export default function MealRecommendationCard({
   onRefresh,
   notice,
   meta,
+  onLogMeal,
 }: Props) {
   const [showSteps, setShowSteps] = useState(false);
   const [altIndex, setAltIndex] = useState(0);
@@ -159,6 +162,15 @@ export default function MealRecommendationCard({
               </button>
             )}
           </div>
+
+          {onLogMeal && (
+            <button
+              onClick={() => onLogMeal(menu)}
+              className="w-full mt-2 py-2.5 rounded-xl bg-orange-500 text-white text-xs font-medium"
+            >
+              ✅ 이거 먹었어요
+            </button>
+          )}
 
           {meta && (
             <p className="mt-2 text-[11px] text-gray-300 text-right">{meta}</p>

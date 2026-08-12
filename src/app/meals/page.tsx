@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { COLLECTIONS } from "@/lib/firestore-schema";
 import { FridgeItem, Member } from "@/types/firestore";
 import type { Menu } from "@/types/recommend";
 import { formatAmount, toIngredients, toMembers } from "@/lib/recommend-client";
+import { guessMealType } from "@/lib/meal-history";
+import MealLogModal, { type MealLogInitial } from "@/components/MealLogModal";
 
 type FridgeItemWithId = FridgeItem & { id: string };
 
@@ -40,6 +43,8 @@ export default function MealsPage() {
   const [loading, setLoading] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState<Menu | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [logInitial, setLogInitial] = useState<MealLogInitial | null>(null);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, COLLECTIONS.FRIDGE), (snap) => {
@@ -106,7 +111,12 @@ export default function MealsPage() {
 
   return (
     <div className="px-4 pt-6">
-      <h1 className="text-xl font-bold text-gray-800 mb-1">오늘 뭐 먹지?</h1>
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="text-xl font-bold text-gray-800">오늘 뭐 먹지?</h1>
+        <Link href="/meals/history" className="text-xs text-orange-500 font-medium">
+          식비 기록 ›
+        </Link>
+      </div>
       <p className="text-xs text-gray-400 mb-5">냉장고 재료로 메뉴를 추천해드려요</p>
 
       {/* Fridge summary */}
@@ -284,17 +294,37 @@ export default function MealsPage() {
               </div>
             </div>
 
-            <div className="px-6 pb-10">
+            <div className="px-6 pb-10 flex gap-2">
               <button
                 onClick={() => setSelectedMenu(null)}
-                className="w-full py-3.5 rounded-2xl bg-gray-100 text-gray-600 text-sm font-medium"
+                className="flex-1 py-3.5 rounded-2xl bg-gray-100 text-gray-600 text-sm font-medium"
               >
                 닫기
+              </button>
+              <button
+                onClick={() => {
+                  setLogInitial({
+                    menu: selectedMenu.name,
+                    type: "home",
+                    mealType: guessMealType(),
+                  });
+                  setSelectedMenu(null);
+                  setShowLogModal(true);
+                }}
+                className="flex-1 py-3.5 rounded-2xl bg-orange-500 text-white text-sm font-medium"
+              >
+                ✅ 이거 먹었어요
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <MealLogModal
+        open={showLogModal}
+        onClose={() => setShowLogModal(false)}
+        initial={logInitial}
+      />
     </div>
   );
 }

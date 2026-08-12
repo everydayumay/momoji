@@ -27,3 +27,6 @@ export const FRIDGE_UNITS = [
 ] as const;
 
 export const DEFAULT_FRIDGE_UNIT = "개";
+
+/** families 컬렉션의 유일한 문서 ID (부부 단일 가족 가정) */
+export const FAMILY_DOC_ID = "main";

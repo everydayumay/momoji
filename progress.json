@@ -1,0 +1,23 @@
+{
+  "key": "project:pickup",
+  "name": "Pick Up!",
+  "icon": "🍰",
+  "unit": "기능",
+  "steps": [
+    { "text": "Firebase/Vercel 연동 + Firestore 스키마", "done": true },
+    { "text": "냉장고 CRUD (수량/단위 포함)", "done": true },
+    { "text": "Claude API 메뉴 추천 + 조리법", "done": true },
+    { "text": "Google 로그인 + 모바일 최적화(390px)", "done": true },
+    { "text": "홈 오늘의 추천 AI 연동 (가족 공유)", "done": true },
+    { "text": "Firestore 보안 규칙 A안 (로그인 사용자 전체 허용)", "done": true },
+    { "text": "식비 기록(mealHistory) CRUD + 홈 예산 카드 연동", "done": true },
+    { "text": "Mission Control 대시보드 자동 보고", "done": true },
+    { "text": "Firestore 보안 규칙 B안 (부부 화이트리스트)", "done": false, "duration": "1일" },
+    { "text": "주간 식단 그리드 + 장보기 목록 자동 생성", "done": false, "duration": "3일" },
+    { "text": "냉장고 유통기한 관리 + 목록 수량 +/- 조절", "done": false, "duration": "2일" },
+    { "text": "API 토큰 검증", "done": false, "duration": "1일" },
+    { "text": "일정 탭 방향 결정 및 구현", "done": false, "duration": "3일" },
+    { "text": "월별 통계", "done": false, "duration": "2일" },
+    { "text": "PWA + 오프라인 대응 + 삭제 실행취소", "done": false, "duration": "3일" }
+  ]
+}
