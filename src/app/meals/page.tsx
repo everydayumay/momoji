@@ -10,6 +10,7 @@ import type { Menu } from "@/types/recommend";
 import { formatAmount, toIngredients, toMembers } from "@/lib/recommend-client";
 import { guessMealType } from "@/lib/meal-history";
 import MealLogModal, { type MealLogInitial } from "@/components/MealLogModal";
+import WeeklyPlanGrid from "@/components/WeeklyPlanGrid";
 
 type FridgeItemWithId = FridgeItem & { id: string };
 
@@ -117,7 +118,23 @@ export default function MealsPage() {
           식비 기록 ›
         </Link>
       </div>
-      <p className="text-xs text-gray-400 mb-5">냉장고 재료로 메뉴를 추천해드려요</p>
+      <p className="text-xs text-gray-400 mb-5">이번 주 식단을 계획하고, 필요하면 바로 추천도 받아보세요</p>
+
+      {/* Weekly plan grid */}
+      <WeeklyPlanGrid
+        fridgeItems={fridgeItems}
+        members={members}
+        onLogMeal={(menu, mealType) => {
+          setLogInitial({ menu, type: "home", mealType });
+          setShowLogModal(true);
+        }}
+      />
+
+      <div className="border-t border-gray-100 pt-5 mb-1">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          지금 바로 추천받기
+        </p>
+      </div>
 
       {/* Fridge summary */}
       {fridgeItems.length > 0 && (

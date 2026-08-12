@@ -8,6 +8,8 @@ export const COLLECTIONS = {
   DELIVERY_BRANDS: "deliveryBrands",
   /** 문서 ID = "YYYY-MM-DD" (한국 시간 기준). 가족이 같은 추천을 공유한다 */
   DAILY_RECOMMENDATIONS: "dailyRecommendations",
+  /** weeklyPlan/{familyId}/weeks/{YYYY-Www}/slots/{day-mealType} */
+  WEEKLY_PLAN: "weeklyPlan",
 } as const;
 
 /** 냉장고 수량 단위 선택지 */
