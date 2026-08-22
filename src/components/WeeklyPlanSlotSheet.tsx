@@ -11,6 +11,7 @@ import {
   type WeeklyPlanSlotWithId,
 } from "@/lib/weekly-plan";
 import { fetchRecommendation, toIngredients, toMembers } from "@/lib/recommend-client";
+import NutritionInfo from "@/components/NutritionInfo";
 import type { FridgeItem, Member } from "@/types/firestore";
 import type { Menu } from "@/types/recommend";
 
@@ -121,7 +122,12 @@ export default function WeeklyPlanSlotSheet({
         <h2 className="text-lg font-bold text-gray-800 mb-1">
           {WEEK_DAY_LABELS[day]}요일 {slotLabel}
         </h2>
-        {current && <p className="text-xs text-gray-400 mb-4">현재: {current.menu}</p>}
+        {current && (
+          <div className="mb-4">
+            <p className="text-xs text-gray-400">현재: {current.menu}</p>
+            <NutritionInfo data={current} compact />
+          </div>
+        )}
 
         {mode === "choose" && (
           <div className="space-y-2 mt-2">
@@ -207,6 +213,7 @@ export default function WeeklyPlanSlotSheet({
                 <p className="text-xs text-gray-400 mt-0.5">
                   {menu.description} · ⏱ {menu.cookTime}
                 </p>
+                <NutritionInfo data={menu} compact />
               </button>
             ))}
             <button

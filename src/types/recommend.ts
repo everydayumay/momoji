@@ -1,5 +1,7 @@
 import type { Timestamp } from "firebase/firestore";
 
+export type GiLevel = "low" | "medium" | "high";
+
 export interface Menu {
   name: string;
   description: string;
@@ -8,6 +10,16 @@ export interface Menu {
   steps: string[];
   /** 가족 건강 메모(예: 임신성 당뇨)를 반영한 이유. 없을 수 있음 */
   healthNote?: string;
+  /** 예상 칼로리 (kcal). 이전 버전 데이터에는 없을 수 있어 optional */
+  calories?: number;
+  /** 탄수화물 (g) */
+  carbs?: number;
+  /** 단백질 (g) */
+  protein?: number;
+  /** 지방 (g) */
+  fat?: number;
+  /** 혈당 영향 (임신성 당뇨 참고용) */
+  giLevel?: GiLevel;
 }
 
 export interface RecommendRequest {

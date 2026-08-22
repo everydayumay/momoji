@@ -9,7 +9,7 @@ import {
 import { db } from "@/lib/firebase";
 import { COLLECTIONS, FAMILY_DOC_ID } from "@/lib/firestore-schema";
 import { kstDateKey } from "@/lib/today";
-import type { Menu } from "@/types/recommend";
+import type { GiLevel, Menu } from "@/types/recommend";
 
 export const WEEK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 export type WeekDay = (typeof WEEK_DAYS)[number];
@@ -41,6 +41,11 @@ export interface WeeklyPlanSlot {
   usedIngredients?: string[];
   healthNote?: string;
   steps?: string[];
+  calories?: number;
+  carbs?: number;
+  protein?: number;
+  fat?: number;
+  giLevel?: GiLevel;
   updatedAt?: Timestamp;
 }
 
@@ -57,6 +62,14 @@ export function getWeekStartYMD(date: Date = new Date()) {
   const dow = utc.getUTCDay() || 7; // 월=1..일=7
   utc.setUTCDate(utc.getUTCDate() - (dow - 1));
   return { y: utc.getUTCFullYear(), m: utc.getUTCMonth() + 1, d: utc.getUTCDate() };
+}
+
+/** KST 기준 특정 날짜의 요일 키 (mon~sun) */
+export function getDayKey(date: Date = new Date()): WeekDay {
+  const [y, m, d] = kstDateKey(date).split("-").map(Number);
+  const utc = toUTCDate(y, m, d);
+  const dow = utc.getUTCDay() || 7; // 월=1..일=7
+  return WEEK_DAYS[dow - 1];
 }
 
 /** 월~일 7일치 { day, y, m, d } 배열 */
@@ -138,6 +151,11 @@ export async function saveWeeklyPlanSlot(input: SaveSlotInput) {
   if (menuDetail?.usedIngredients) data.usedIngredients = menuDetail.usedIngredients;
   if (menuDetail?.healthNote) data.healthNote = menuDetail.healthNote;
   if (menuDetail?.steps) data.steps = menuDetail.steps;
+  if (typeof menuDetail?.calories === "number") data.calories = menuDetail.calories;
+  if (typeof menuDetail?.carbs === "number") data.carbs = menuDetail.carbs;
+  if (typeof menuDetail?.protein === "number") data.protein = menuDetail.protein;
+  if (typeof menuDetail?.fat === "number") data.fat = menuDetail.fat;
+  if (menuDetail?.giLevel) data.giLevel = menuDetail.giLevel;
 
   await setDoc(doc(slotsCollection(weekKey), slotDocId(day, mealType)), data);
 }

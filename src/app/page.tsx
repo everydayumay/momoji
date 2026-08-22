@@ -1,33 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { collection, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { COLLECTIONS, FAMILY_DOC_ID } from "@/lib/firestore-schema";
-import { useAuth } from "@/contexts/AuthContext";
 import type { FridgeItem, Member } from "@/types/firestore";
-import type { DailyRecommendationDoc } from "@/types/recommend";
 import { formatKoreanDate, kstDateKey } from "@/lib/today";
+import { deriveTimeRange, fetchRecommendation, toIngredients, toMembers } from "@/lib/recommend-client";
 import {
-  buildSignature,
-  clearLegacyLocalCache,
-  deriveTimeRange,
-  fetchRecommendation,
-  saveSlotRecommendation,
-  subscribeDailyRecommendation,
-  toIngredients,
-  toMembers,
-} from "@/lib/recommend-client";
-import {
-  subscribeMealHistory,
-  type MealHistoryWithId,
-} from "@/lib/meal-history";
-import MealRecommendationCard, {
-  type SlotState,
-} from "@/components/MealRecommendationCard";
+  getDayKey,
+  getWeekKey,
+  saveWeeklyPlanSlot,
+  subscribeWeeklyPlan,
+  type WeeklyMealType,
+  type WeeklyPlanSlotWithId,
+} from "@/lib/weekly-plan";
+import { subscribeMealHistory, type MealHistoryWithId } from "@/lib/meal-history";
+import HomeMealSlotCard from "@/components/HomeMealSlotCard";
 import MealLogModal, { type MealLogInitial } from "@/components/MealLogModal";
-import type { Menu } from "@/types/recommend";
 
 const SLOTS = [
   {
@@ -44,51 +35,31 @@ const SLOTS = [
     fallback: "18:00 – 20:00",
     mealType: "dinner",
   },
-] as const;
-
-const EMPTY_SLOT: SlotState = { status: "idle", menus: [], error: null };
-
-/** 이번 세션에서 방금 받아온 결과 / 진행 상태 */
-type LocalSlot =
-  | { status: "loading" }
-  | { status: "ready"; menus: SlotState["menus"]; signature: string }
-  | { status: "error"; error: string };
+] as const satisfies readonly { key: string; emoji: string; keywords: readonly string[]; fallback: string; mealType: WeeklyMealType }[];
 
 export default function HomePage() {
-  const { user } = useAuth();
-
+  // KST "오늘"은 마운트 후에만 확정 (빌드타임/서버 고정 방지)
+  const [baseDate, setBaseDate] = useState<Date | null>(null);
   const [dateStr, setDateStr] = useState("");
-  const [dateKey, setDateKey] = useState("");
+
   const [fridgeItems, setFridgeItems] = useState<FridgeItem[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [fridgeLoaded, setFridgeLoaded] = useState(false);
   const [membersLoaded, setMembersLoaded] = useState(false);
 
-  const [shared, setShared] = useState<DailyRecommendationDoc | null>(null);
-  const [sharedLoaded, setSharedLoaded] = useState(false);
-  const [local, setLocal] = useState<Record<string, LocalSlot>>({});
+  const [weeklySlots, setWeeklySlots] = useState<Record<string, WeeklyPlanSlotWithId>>({});
+  const [loadingSlot, setLoadingSlot] = useState<Partial<Record<WeeklyMealType, boolean>>>({});
+  const [slotError, setSlotError] = useState<Partial<Record<WeeklyMealType, string | null>>>({});
 
   const [mealHistory, setMealHistory] = useState<MealHistoryWithId[]>([]);
   const [monthlyBudget, setMonthlyBudget] = useState<number | null>(null);
   const [showLogModal, setShowLogModal] = useState(false);
   const [logInitial, setLogInitial] = useState<MealLogInitial | null>(null);
 
-  // 진행 중 슬롯을 effect 의존성 없이 추적
-  const inFlight = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    clearLegacyLocalCache();
-  }, []);
-
-  // 날짜: 클라이언트에서 KST 기준으로 계산 (빌드 타임 고정 방지)
   useEffect(() => {
     const sync = () => {
       const now = new Date();
+      setBaseDate(now);
       setDateStr(formatKoreanDate(now));
-      setDateKey((prev) => {
-        const next = kstDateKey(now);
-        return prev === next ? prev : next;
-      });
     };
     sync();
     const timer = setInterval(sync, 60_000); // 자정 넘어가면 자동 갱신
@@ -98,7 +69,6 @@ export default function HomePage() {
   useEffect(() => {
     const unsub = onSnapshot(collection(db, COLLECTIONS.FRIDGE), (snap) => {
       setFridgeItems(snap.docs.map((d) => d.data() as FridgeItem));
-      setFridgeLoaded(true);
     });
     return unsub;
   }, []);
@@ -126,22 +96,16 @@ export default function HomePage() {
     return unsub;
   }, []);
 
-  // 가족이 공유하는 오늘의 추천 문서 구독
-  useEffect(() => {
-    if (!dateKey) return;
-    setSharedLoaded(false);
-    setLocal({});
-    const unsub = subscribeDailyRecommendation(dateKey, (docData) => {
-      setShared(docData);
-      setSharedLoaded(true);
-    });
-    return unsub;
-  }, [dateKey]);
+  const weekKey = baseDate ? getWeekKey(baseDate) : "";
+  const todayDay = baseDate ? getDayKey(baseDate) : null;
+  const dateKey = baseDate ? kstDateKey(baseDate) : "";
 
-  const signature = useMemo(
-    () => buildSignature(fridgeItems, members),
-    [fridgeItems, members]
-  );
+  // 오늘이 속한 주의 weeklyPlan 슬롯 구독 (주간 그리드와 항상 같은 데이터를 본다)
+  useEffect(() => {
+    if (!weekKey) return;
+    const unsub = subscribeWeeklyPlan(weekKey, setWeeklySlots);
+    return unsub;
+  }, [weekKey]);
 
   const monthlySpent = useMemo(() => {
     if (!dateKey) return 0;
@@ -159,127 +123,50 @@ export default function HomePage() {
       ? Math.min(100, Math.round((monthlySpent / monthlyBudget) * 100))
       : 0;
 
-  const openLogModal = useCallback((menu: Menu, mealType: "breakfast" | "lunch" | "dinner" | "snack") => {
-    setLogInitial({ menu: menu.name, type: "home", mealType });
-    setShowLogModal(true);
-  }, []);
-
-  const loadSlot = useCallback(
-    async (slotKey: string) => {
-      if (!dateKey || fridgeItems.length === 0) return;
-      if (inFlight.current.has(slotKey)) return;
-
-      inFlight.current.add(slotKey);
-      setLocal((s) => ({ ...s, [slotKey]: { status: "loading" } }));
-
+  const handleRecommend = useCallback(
+    async (mealType: WeeklyMealType, label: string) => {
+      if (!weekKey || !todayDay) return;
+      if (fridgeItems.length === 0) {
+        setSlotError((s) => ({ ...s, [mealType]: "냉장고에 재료를 먼저 추가해주세요" }));
+        return;
+      }
+      setLoadingSlot((s) => ({ ...s, [mealType]: true }));
+      setSlotError((s) => ({ ...s, [mealType]: null }));
       try {
         const menus = await fetchRecommendation({
           ingredients: toIngredients(fridgeItems),
           members: toMembers(members),
-          mealType: slotKey,
-          count: 2,
+          mealType: label,
+          count: 1,
         });
-        if (menus.length === 0) throw new Error("추천 결과가 비어 있습니다");
+        const menu = menus[0];
+        if (!menu) throw new Error("추천 결과가 비어 있습니다");
 
-        setLocal((s) => ({
-          ...s,
-          [slotKey]: { status: "ready", menus, signature },
-        }));
-
-        // 저장 실패해도 화면에는 이미 결과가 떠 있으므로 막지 않는다
-        try {
-          await saveSlotRecommendation({
-            dateKey,
-            slot: slotKey,
-            menus,
-            signature,
-            updatedBy: user?.displayName ?? null,
-          });
-        } catch (saveErr) {
-          console.warn("추천 공유 저장 실패:", saveErr);
-        }
+        // weeklyPlan에 저장 → 이 화면과 주간 그리드가 항상 동기화된다
+        await saveWeeklyPlanSlot({
+          weekKey,
+          day: todayDay,
+          mealType,
+          menu: menu.name,
+          source: "ai",
+          menuDetail: menu,
+        });
       } catch (err) {
-        setLocal((s) => ({
+        setSlotError((s) => ({
           ...s,
-          [slotKey]: {
-            status: "error",
-            error: err instanceof Error ? err.message : "추천 실패",
-          },
+          [mealType]: err instanceof Error ? err.message : "추천 실패",
         }));
       } finally {
-        inFlight.current.delete(slotKey);
+        setLoadingSlot((s) => ({ ...s, [mealType]: false }));
       }
     },
-    [dateKey, fridgeItems, members, signature, user]
+    [weekKey, todayDay, fridgeItems, members]
   );
 
-  // 오늘 저장된 추천이 아예 없을 때만 자동 호출 (있으면 가족 것을 그대로 씀)
-  useEffect(() => {
-    if (!dateKey || !sharedLoaded || !fridgeLoaded || !membersLoaded) return;
-    if (fridgeItems.length === 0) return;
-
-    SLOTS.forEach((slot) => {
-      if (shared?.slots?.[slot.key]?.menus?.length) return;
-      if (local[slot.key]) return;
-      void loadSlot(slot.key);
-    });
-  }, [
-    dateKey,
-    sharedLoaded,
-    fridgeLoaded,
-    membersLoaded,
-    fridgeItems.length,
-    shared,
-    local,
-    loadSlot,
-  ]);
-
-  const viewFor = useCallback(
-    (slotKey: string) => {
-      const mine = local[slotKey];
-      const saved = shared?.slots?.[slotKey];
-
-      if (mine?.status === "loading") {
-        return { state: { status: "loading", menus: [], error: null } as SlotState, notice: null, meta: null };
-      }
-
-      if (mine?.status === "ready") {
-        return {
-          state: { status: "ready", menus: mine.menus, error: null } as SlotState,
-          notice:
-            mine.signature !== signature
-              ? "냉장고 재료가 바뀌었어요 · 다시 추천을 눌러보세요"
-              : null,
-          meta: null,
-        };
-      }
-
-      if (saved?.menus?.length) {
-        const stale = saved.signature !== signature;
-        const failed = mine?.status === "error";
-        return {
-          state: { status: "ready", menus: saved.menus, error: null } as SlotState,
-          notice: failed
-            ? `갱신 실패 · ${mine.error}`
-            : stale
-              ? "냉장고 재료가 바뀌었어요 · 다시 추천을 눌러보세요"
-              : null,
-          meta: formatMeta(saved.updatedAt, saved.updatedBy),
-        };
-      }
-
-      if (mine?.status === "error") {
-        return {
-          state: { status: "error", menus: [], error: mine.error } as SlotState,
-          notice: null,
-          meta: null,
-        };
-      }
-
-      return { state: EMPTY_SLOT, notice: null, meta: null };
-    },
-    [local, shared, signature]
-  );
+  const openLogModal = useCallback((menu: string, mealType: WeeklyMealType) => {
+    setLogInitial({ menu, type: "home", mealType });
+    setShowLogModal(true);
+  }, []);
 
   const hasIngredients = fridgeItems.length > 0;
 
@@ -301,21 +188,22 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Meal Recommendations */}
+      {/* Meal Slots (오늘의 weeklyPlan) */}
       <div className="space-y-4 mb-6">
         {SLOTS.map((slot) => {
-          const view = viewFor(slot.key);
+          const cellId = todayDay ? `${todayDay}-${slot.mealType}` : "";
+          const cell = cellId ? weeklySlots[cellId] ?? null : null;
           return (
-            <MealRecommendationCard
+            <HomeMealSlotCard
               key={slot.key}
               label={slot.key}
               emoji={slot.emoji}
               timeRange={deriveTimeRange(members, slot.keywords, slot.fallback)}
-              state={view.state}
-              notice={view.notice}
-              meta={view.meta}
+              slot={cell}
+              loading={!!loadingSlot[slot.mealType]}
+              error={slotError[slot.mealType] ?? null}
               hasIngredients={hasIngredients}
-              onRefresh={() => loadSlot(slot.key)}
+              onRecommend={() => handleRecommend(slot.mealType, slot.key)}
               onLogMeal={(menu) => openLogModal(menu, slot.mealType)}
             />
           );
@@ -369,23 +257,6 @@ export default function HomePage() {
       />
     </div>
   );
-}
-
-function formatMeta(
-  updatedAt: { toDate: () => Date } | undefined,
-  updatedBy: string | null | undefined
-) {
-  if (!updatedAt?.toDate) return null;
-  try {
-    const time = updatedAt.toDate().toLocaleTimeString("ko-KR", {
-      timeZone: "Asia/Seoul",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    return updatedBy ? `${time} · ${updatedBy}` : time;
-  } catch {
-    return null;
-  }
 }
 
 function QuickAction({

@@ -11,6 +11,7 @@ import { formatAmount, toIngredients, toMembers } from "@/lib/recommend-client";
 import { guessMealType } from "@/lib/meal-history";
 import MealLogModal, { type MealLogInitial } from "@/components/MealLogModal";
 import WeeklyPlanGrid from "@/components/WeeklyPlanGrid";
+import NutritionInfo from "@/components/NutritionInfo";
 
 type FridgeItemWithId = FridgeItem & { id: string };
 
@@ -198,6 +199,7 @@ export default function MealsPage() {
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">{menu.description}</p>
+                  <NutritionInfo data={menu} compact />
                   <div className="flex flex-wrap gap-1 mt-2">
                     {menu.usedIngredients.slice(0, 4).map((ing, i) => (
                       <span
@@ -273,6 +275,8 @@ export default function MealsPage() {
                   💚 {selectedMenu.healthNote}
                 </p>
               )}
+
+              <NutritionInfo data={selectedMenu} />
 
               {/* Ingredients */}
               <div>

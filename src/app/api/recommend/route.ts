@@ -60,6 +60,8 @@ export async function POST(request: Request) {
 - 가성비를 중요하게 생각하는 가족입니다. 비싼 식재료나 특수한 재료는 피하세요.
 - 식사 구분이 주어졌다면 그 시간대에 어울리는 부담 없는 메뉴로 추천하세요.
 - healthNote에는 건강 메모를 어떻게 반영했는지 20자 이내로 적고, 반영할 건강 메모가 없으면 빈 문자열을 넣으세요.
+- 완성된 1인분 기준으로 calories(kcal, 정수), carbs/protein/fat(g, 정수)을 실제 음식 상식에 맞게 추정하세요.
+- giLevel은 이 메뉴가 혈당에 미치는 영향을 "low"(저GI) / "medium"(보통) / "high"(고GI, 정제 탄수화물·단순당 위주) 중 하나로 판단하세요. 임신성 당뇨가 있는 가족 구성원이 있다면 이 값을 더 보수적으로(애매하면 한 단계 높게) 판단하세요.
 
 반드시 아래 JSON만 응답하세요. 다른 텍스트 없이 JSON만 출력하세요.
 
@@ -71,6 +73,11 @@ export async function POST(request: Request) {
       "cookTime": "조리 시간 (예: 20분)",
       "usedIngredients": ["재료1", "재료2"],
       "healthNote": "건강 메모 반영 내용 (없으면 \\"\\")",
+      "calories": 450,
+      "carbs": 55,
+      "protein": 20,
+      "fat": 12,
+      "giLevel": "low",
       "steps": [
         "1. 조리 단계 설명",
         "2. 조리 단계 설명",
@@ -90,7 +97,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 400 + count * 450,
+        max_tokens: 450 + count * 500,
         messages: [{ role: "user", content: prompt }],
       }),
     });
